@@ -161,8 +161,12 @@ class BioMedCLIPValidator:
     The first that loads successfully is used automatically.
     """
 
-    # (model_arch, pretrained_tag, tokenizer_tag, is_hf_hub)
+    # (display_name, pretrained_tag_or_id, tokenizer_tag, is_hf_hub)
+    # Prefer medical-domain CLIP models (BioMedCLIP, PubMedCLIP) and fall back
+    # to a general OpenAI checkpoint if domain models are unavailable.
     BACKENDS = [
+        ("BioMedCLIP", "microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224", "ViT-L-14-336", True),
+        ("PubMedCLIP", "flaviagiammarino/pubmed-clip-vit-base-patch32", "ViT-B-32", True),
         ("ViT-B-32", "openai", "ViT-B-32", False),
     ]
 
@@ -186,8 +190,12 @@ class BioMedCLIPValidator:
             try:
                 print(f"[Validator] Trying {arch} ...")
                 if is_hf:
-                    model, preprocess = open_clip.create_model_from_pretrained(arch)
-                    tokenizer = open_clip.get_tokenizer(tok_tag)
+                    model, preprocess = open_clip.create_model_from_pretrained(
+                        f"hf-hub:{pretrained}"
+                    )
+                    tokenizer = open_clip.get_tokenizer(
+                        f"hf-hub:{pretrained}"
+                    )
                 else:
                     model, _, preprocess = open_clip.create_model_and_transforms(
                         arch, pretrained=pretrained
