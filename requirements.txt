@@ -1,0 +1,37 @@
+# AutoMiSeg — requirements
+# Install with: pip install -r requirements.txt
+
+# Core vision
+torch>=2.0.0
+torchvision>=0.15.0
+Pillow>=9.0.0
+numpy>=1.24.0
+opencv-python>=4.7.0
+
+# DINOv2 (loaded via torch.hub — no separate install needed)
+# But timm is required by DINOv2:
+timm>=0.9.0
+scikit-learn>=1.2.0   # KMeans for prompt boosting
+
+# SAM (Segment Anything)
+# pip install git+https://github.com/facebookresearch/segment-anything.git
+# OR: pip install segment-anything
+
+# Grounding DINO
+groundingdino-py>=0.1.0
+# If above fails on Windows, try: pip install groundingdino-py --no-build-isolation
+
+# BioMedCLIP validator
+open_clip_torch>=2.20.0
+transformers>=4.35.0
+accelerate>=0.24.0
+
+# Bayesian Optimization
+optuna>=3.4.0
+
+# Progress / utils
+tqdm>=4.65.0
+
+# ---- Optional: CogVLM (for Colab only, ~16GB VRAM) ----
+# pip install transformers accelerate
+# Model: THUDM/cogvlm-grounding-generalist-hf (downloaded automatically)
