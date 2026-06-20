@@ -197,7 +197,16 @@ class GroundingDINOBackend:
         if boxes.shape[0] == 0:
             return None
 
+        # print("Detected boxes:", len(boxes))
+        # for i, (box, logit) in enumerate(zip(boxes, logits)):
+        #     print(f"Mask {i}: score={logit}")
+
         # Pick highest-confidence box; convert from cx,cy,w,h (normalized) → xmin,ymin,xmax,ymax (pixels)
+        print(f"[Grounding] Detected boxes: {len(boxes)}")
+
+        for i, (box, logit) in enumerate(zip(boxes, logits)):
+            print(f"Box {i}: score={float(logit):.4f}")
+
         best_idx = logits.argmax().item()
         cx, cy, w, h = boxes[best_idx].tolist()
         W, H = image.size
@@ -205,11 +214,32 @@ class GroundingDINOBackend:
         ymin = int((cy - h / 2) * H)
         xmax = int((cx + w / 2) * W)
         ymax = int((cy + h / 2) * H)
-        return (
-            max(0, xmin), max(0, ymin),
-            min(W, xmax), min(H, ymax),
+        bbox = (
+            max(0, xmin),
+            max(0, ymin),
+            min(W, xmax),
+            min(H, ymax),
+        )
+        from PIL import ImageDraw
+        import os
+
+        os.makedirs("outputs", exist_ok=True)
+
+        vis = image.copy()
+        draw = ImageDraw.Draw(vis)
+
+        xmin, ymin, xmax, ymax = bbox
+
+        draw.rectangle(
+            [xmin, ymin, xmax, ymax],
+            outline="green",
+            width=4
         )
 
+        vis.save("outputs/grounding_box.png")
+
+        return bbox        
+        
 
 # ---------------------------------------------------------------------------
 # CogVLM backend (for Colab / 16GB+ GPU)

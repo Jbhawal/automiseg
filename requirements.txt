@@ -35,3 +35,4 @@ tqdm>=4.65.0
 # ---- Optional: CogVLM (for Colab only, ~16GB VRAM) ----
 # pip install transformers accelerate
 # Model: THUDM/cogvlm-grounding-generalist-hf (downloaded automatically)
+scikit-learn

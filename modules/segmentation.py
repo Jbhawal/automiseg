@@ -89,9 +89,28 @@ class SegmentationModule:
             box=box_np[None, :],    # SAM expects (1, 4) shape
             multimask_output=True,
         )
+        from PIL import Image
+        import os
+
+        os.makedirs("outputs", exist_ok=True)
+
+        print(f"[SAM] Num masks: {len(masks)}")
+        print(f"[SAM] Scores: {scores}")
+
+        for i, mask in enumerate(masks):
+            Image.fromarray(
+                (mask.astype(np.uint8) * 255)
+            ).save(f"outputs/sam_mask_{i}.png")
 
         # Pick mask with highest confidence score
         best_idx = scores.argmax()
         mask_binary = (masks[best_idx] > 0).astype(np.uint8) * 255
 
         return mask_binary
+        # print("SAM masks:", len(masks))
+        # print("SAM scores: ", scores)
+        # for i, m in enumerate(masks):
+        #     Image.fromarray(
+        #         (m.astype(np.uint8) * 255)
+        #     ).save(f"outputs/mask_{i}.png")
+        # return masks, scores

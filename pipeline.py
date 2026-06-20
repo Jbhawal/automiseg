@@ -111,6 +111,31 @@ class AutoMiSeg:
         img_for_grounding = apply_lta_transforms(image, lta_params, role="grounding")
         img_for_seg = apply_lta_transforms(image, lta_params, role="segmentation")
 
+        # prepare output folder for intermediate results
+        stem = getattr(image, 'filename', None)
+        if stem:
+            stem = Path(stem).stem
+        else:
+            stem = "image"
+        out_dir = Path("outputs") / stem
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        # find next index for this run so we keep previous outputs
+        existing = list(out_dir.glob("[0-9]_*.png")) + list(out_dir.glob("[0-9][0-9]_*.png"))
+        max_idx = 0
+        for p in existing:
+            try:
+                idx = int(p.name.split("_")[0])
+                if idx > max_idx:
+                    max_idx = idx
+            except Exception:
+                continue
+        run_idx = max_idx + 1
+
+        # save the transformed inputs for debugging with run index prefix
+        img_for_grounding.save(str(out_dir / f"{run_idx}_input_grounding.png"))
+        img_for_seg.save(str(out_dir / f"{run_idx}_input_segmentation.png"))
+
         # --- Step 2: Grounding → bounding box ---
         prompt_sentences = self.grounder.build_prompts(task)
         chosen_prompt = prompt_sentences[lta_params.get("grd_prompt_id", 0) % len(prompt_sentences)]
@@ -120,13 +145,23 @@ class AutoMiSeg:
             # fallback: full-image box
             w, h = image.size
             bbox = (0, 0, w, h)
+        # save bounding-box visualization
+        from utils.viz import visualize_result
+        visualize_result(image, np.zeros((image.size[1], image.size[0]), dtype=np.uint8), bbox=bbox,
+                 out_path=str(out_dir / f"{run_idx}_step_grounding_box.png"))
 
         # --- Step 3: Visual prompt boosting → point prompts ---
         k = lta_params.get("bst_k_points", self.config.topk_points)
         point_prompts = self.booster.generate_points(img_for_seg, bbox, k=k)
+        # save point prompts visualization (no mask yet)
+        visualize_result(image, np.zeros((image.size[1], image.size[0]), dtype=np.uint8), bbox=bbox,
+                 point_prompts=point_prompts, out_path=str(out_dir / f"{run_idx}_step_boosting_points.png"))
 
         # --- Step 4: SAM segmentation ---
         mask = self.segmenter.predict(img_for_seg, bbox, point_prompts)
+        # save SAM candidate / final mask visualization
+        visualize_result(image, mask, bbox=bbox, point_prompts=point_prompts,
+                 out_path=str(out_dir / f"{run_idx}_step_sam_final_mask.png"))
 
         return mask
 

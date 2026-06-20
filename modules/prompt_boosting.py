@@ -14,6 +14,8 @@ DINOv2 variant choices for 4GB VRAM:
   - dinov2_vitl14  (307M params, ~2.5GB) — may not fit on 4GB
 """
 
+from email.mime import image
+
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -103,6 +105,7 @@ class PromptBoostingModule:
         sy = H_patches / H_orig
 
         xmin, ymin, xmax, ymax = bbox
+        print(f"[PromptBoosting] BBox: {bbox}")
 
         # --- Anchor point (center of bounding box) ---
         ax = (xmin + xmax) / 2
@@ -111,6 +114,8 @@ class PromptBoostingModule:
         ay_f = min(int(ay * sy), H_patches - 1)
         fa = feat_map[ay_f, ax_f]  # (D,)
         fa = F.normalize(fa, dim=0)
+
+        print(f"[PromptBoosting] Anchor point: ({ax:.1f}, {ay:.1f})")
 
         # --- Collect candidate points restricted to bbox ---
         # Convert bbox to feature coords
@@ -149,6 +154,53 @@ class PromptBoostingModule:
 
         kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init="auto")
         kmeans.fit(pixel_points)
+        # centroids = kmeans.cluster_centers_.astype(int)
+
+        # return [(int(c[0]), int(c[1])) for c in centroids]
+
         centroids = kmeans.cluster_centers_.astype(int)
 
-        return [(int(c[0]), int(c[1])) for c in centroids]
+        points = [(int(c[0]), int(c[1])) for c in centroids]
+
+        print(f"[PromptBoosting] Prompt points: {points}")
+
+        # ----------------------------
+        # Debug visualization
+        # ----------------------------
+        try:
+            from PIL import ImageDraw
+            import os
+
+            os.makedirs("outputs", exist_ok=True)
+
+            vis = image.copy()
+            draw = ImageDraw.Draw(vis)
+
+            # Draw bbox
+            draw.rectangle(
+                [xmin, ymin, xmax, ymax],
+                outline="green",
+                width=3
+            )
+
+            # Draw anchor
+            draw.ellipse(
+                [ax-6, ay-6, ax+6, ay+6],
+                outline="yellow",
+                width=3
+            )
+
+            # Draw prompt points
+            for x, y in points:
+                draw.ellipse(
+                    [x-5, y-5, x+5, y+5],
+                    outline="red",
+                    width=3
+                )
+
+            vis.save("outputs/prompt_points.png")
+
+        except Exception as e:
+            print(f"[PromptBoosting] Visualization failed: {e}")
+
+        return points
